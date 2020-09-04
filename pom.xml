@@ -82,8 +82,8 @@ under the License.
 		<module>flink-metrics</module>
 		<module>flink-yarn</module>
 		<module>flink-yarn-tests</module>
-		<module>flink-fs-tests</module>
-		<module>flink-docs</module>
+		<!--<module>flink-fs-tests</module>-->
+		<!--<module>flink-docs</module>-->
 		<module>flink-python</module>
 		<module>flink-ml-parent</module>
 		<module>flink-walkthroughs</module>
@@ -172,6 +172,7 @@ under the License.
 		<dependency>
 			<groupId>org.slf4j</groupId>
 			<artifactId>slf4j-api</artifactId>
+			<version>1.7.25</version>
 		</dependency>
 
 		<!-- 'javax.annotation' classes like '@Nullable' -->
@@ -909,13 +910,13 @@ under the License.
 								<skip>true</skip>
 							</configuration>
 						</plugin>
-						<plugin>
-							<groupId>org.apache.maven.plugins</groupId>
-							<artifactId>maven-checkstyle-plugin</artifactId>
-							<configuration>
-								<skip>true</skip>
-							</configuration>
-						</plugin>
+						<!--<plugin>-->
+							<!--<groupId>org.apache.maven.plugins</groupId>-->
+							<!--<artifactId>maven-checkstyle-plugin</artifactId>-->
+							<!--<configuration>-->
+								<!--<skip>true</skip>-->
+							<!--</configuration>-->
+						<!--</plugin>-->
 						<plugin>
 							<groupId>org.scalastyle</groupId>
 							<artifactId>scalastyle-maven-plugin</artifactId>
@@ -1479,10 +1480,10 @@ under the License.
 					</excludes>
 				</configuration>
 			</plugin>
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-checkstyle-plugin</artifactId>
-			</plugin>
+			<!--<plugin>-->
+				<!--<groupId>org.apache.maven.plugins</groupId>-->
+				<!--<artifactId>maven-checkstyle-plugin</artifactId>-->
+			<!--</plugin>-->
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-compiler-plugin</artifactId>
@@ -1689,35 +1690,35 @@ under the License.
 					</configuration>
 				</plugin>
 
-				<plugin>
-					<groupId>org.apache.maven.plugins</groupId>
-					<artifactId>maven-checkstyle-plugin</artifactId>
-					<version>2.17</version>
-					<dependencies>
-						<dependency>
-							<groupId>com.puppycrawl.tools</groupId>
-							<artifactId>checkstyle</artifactId>
-							<!-- Note: match version with docs/flinkDev/ide_setup.md -->
-							<version>8.14</version>
-						</dependency>
-					</dependencies>
-					<executions>
-						<execution>
-							<id>validate</id>
-							<phase>validate</phase>
-							<goals>
-								<goal>check</goal>
-							</goals>
-						</execution>
-					</executions>
-					<configuration>
-						<suppressionsLocation>/tools/maven/suppressions.xml</suppressionsLocation>
-						<includeTestSourceDirectory>true</includeTestSourceDirectory>
-						<configLocation>/tools/maven/checkstyle.xml</configLocation>
-						<logViolationsToConsole>true</logViolationsToConsole>
-						<failOnViolation>true</failOnViolation>
-					</configuration>
-				</plugin>
+				<!--<plugin>-->
+					<!--<groupId>org.apache.maven.plugins</groupId>-->
+					<!--<artifactId>maven-checkstyle-plugin</artifactId>-->
+					<!--<version>2.17</version>-->
+					<!--<dependencies>-->
+						<!--<dependency>-->
+							<!--<groupId>com.puppycrawl.tools</groupId>-->
+							<!--<artifactId>checkstyle</artifactId>-->
+							<!--&lt;!&ndash; Note: match version with docs/flinkDev/ide_setup.md &ndash;&gt;-->
+							<!--<version>8.14</version>-->
+						<!--</dependency>-->
+					<!--</dependencies>-->
+					<!--<executions>-->
+						<!--<execution>-->
+							<!--<id>validate</id>-->
+							<!--<phase>validate</phase>-->
+							<!--<goals>-->
+								<!--<goal>check</goal>-->
+							<!--</goals>-->
+						<!--</execution>-->
+					<!--</executions>-->
+					<!--<configuration>-->
+						<!--<suppressionsLocation>/tools/maven/suppressions.xml</suppressionsLocation>-->
+						<!--<includeTestSourceDirectory>true</includeTestSourceDirectory>-->
+						<!--<configLocation>/tools/maven/checkstyle.xml</configLocation>-->
+						<!--<logViolationsToConsole>true</logViolationsToConsole>-->
+						<!--<failOnViolation>true</failOnViolation>-->
+					<!--</configuration>-->
+				<!--</plugin>-->
 
 				<plugin>
 					<groupId>org.apache.maven.plugins</groupId>

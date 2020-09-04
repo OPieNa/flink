@@ -50,11 +50,11 @@ under the License.
 			<version>${project.version}</version>
 		</dependency>
 
-		<dependency>
-			<groupId>org.apache.flink</groupId>
-			<artifactId>flink-connector-twitter_${scala.binary.version}</artifactId>
-			<version>${project.version}</version>
-		</dependency>
+		<!--<dependency>-->
+			<!--<groupId>org.apache.flink</groupId>-->
+			<!--<artifactId>flink-connector-twitter_${scala.binary.version}</artifactId>-->
+			<!--<version>${project.version}</version>-->
+		<!--</dependency>-->
 
 		<dependency>
 			<groupId>org.apache.flink</groupId>
@@ -96,13 +96,13 @@ under the License.
 		<plugins>
 
 			<!-- Scala Code Style, most of the configuration done via plugin management -->
-			<plugin>
-				<groupId>org.scalastyle</groupId>
-				<artifactId>scalastyle-maven-plugin</artifactId>
-				<configuration>
-					<configLocation>${project.basedir}/../../tools/maven/scalastyle-config.xml</configLocation>
-				</configuration>
-			</plugin>
+			<!--<plugin>-->
+				<!--<groupId>org.scalastyle</groupId>-->
+				<!--<artifactId>scalastyle-maven-plugin</artifactId>-->
+				<!--<configuration>-->
+					<!--<configLocation>${project.basedir}/../../tools/maven/scalastyle-config.xml</configLocation>-->
+				<!--</configuration>-->
+			<!--</plugin>-->
 			
 			<!-- get default data from flink-examples-batch package -->
 			<plugin>
@@ -491,30 +491,30 @@ under the License.
 		<pluginManagement>
 			<plugins>
 				<!--This plugin's configuration is used to store Eclipse m2e settings only. It has no influence on the Maven build itself.-->
-				<plugin>
-					<groupId>org.eclipse.m2e</groupId>
-					<artifactId>lifecycle-mapping</artifactId>
-					<version>1.0.0</version>
-					<configuration>
-						<lifecycleMappingMetadata>
-							<pluginExecutions>
-								<pluginExecution>
-									<pluginExecutionFilter>
-										<groupId>org.apache.maven.plugins</groupId>
-										<artifactId>maven-dependency-plugin</artifactId>
-										<versionRange>[2.9,)</versionRange>
-										<goals>
-											<goal>unpack</goal>
-										</goals>
-									</pluginExecutionFilter>
-									<action>
-										<ignore/>
-									</action>
-								</pluginExecution>
-							</pluginExecutions>
-						</lifecycleMappingMetadata>
-					</configuration>
-				</plugin>
+				<!--<plugin>-->
+					<!--<groupId>org.eclipse.m2e</groupId>-->
+					<!--<artifactId>lifecycle-mapping</artifactId>-->
+					<!--<version>1.0.0</version>-->
+					<!--<configuration>-->
+						<!--<lifecycleMappingMetadata>-->
+							<!--<pluginExecutions>-->
+								<!--<pluginExecution>-->
+									<!--<pluginExecutionFilter>-->
+										<!--<groupId>org.apache.maven.plugins</groupId>-->
+										<!--<artifactId>maven-dependency-plugin</artifactId>-->
+										<!--<versionRange>[2.9,)</versionRange>-->
+										<!--<goals>-->
+											<!--<goal>unpack</goal>-->
+										<!--</goals>-->
+									<!--</pluginExecutionFilter>-->
+									<!--<action>-->
+										<!--<ignore/>-->
+									<!--</action>-->
+								<!--</pluginExecution>-->
+							<!--</pluginExecutions>-->
+						<!--</lifecycleMappingMetadata>-->
+					<!--</configuration>-->
+				<!--</plugin>-->
 			</plugins>
 		</pluginManagement>
 

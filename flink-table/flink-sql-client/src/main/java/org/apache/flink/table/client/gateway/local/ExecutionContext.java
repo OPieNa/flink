@@ -33,6 +33,9 @@ import org.apache.flink.client.deployment.ClusterSpecification;
 import org.apache.flink.configuration.Configuration;
 import org.apache.flink.core.plugin.TemporaryClassLoaderContext;
 import org.apache.flink.runtime.execution.librarycache.FlinkUserCodeClassLoaders;
+import org.apache.flink.runtime.state.StateBackend;
+import org.apache.flink.runtime.state.filesystem.FsStateBackend;
+import org.apache.flink.streaming.api.CheckpointingMode;
 import org.apache.flink.streaming.api.TimeCharacteristic;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
 import org.apache.flink.table.api.BatchQueryConfig;
@@ -340,7 +343,7 @@ public class ExecutionContext<ClusterID> {
 			throw new SqlExecutionException("Invalid deployment run options.", e);
 		}
 
-		LOG.info("Executor config: {}", executionConfig);
+		LOG.info("[info] Executor config: {}", executionConfig);
 		return executionConfig;
 	}
 
@@ -451,6 +454,7 @@ public class ExecutionContext<ClusterID> {
 				config.getConfiguration().setString(k, v));
 
 		if (noInheritedState) {
+			LOG.info("[info] 执行--> noInheritedState1");
 			//--------------------------------------------------------------------------------------------------------------
 			// Step.1 Create environments
 			//--------------------------------------------------------------------------------------------------------------
@@ -496,6 +500,7 @@ public class ExecutionContext<ClusterID> {
 			// No need to register the catalogs if already inherit from the same session.
 			initializeCatalogs();
 		} else {
+			LOG.info("[info] 执行--> noInheritedState2");
 			// Set up session state.
 			this.sessionState = sessionState;
 			createTableEnvironment(
@@ -514,6 +519,7 @@ public class ExecutionContext<ClusterID> {
 			ModuleManager moduleManager,
 			FunctionCatalog functionCatalog) {
 		if (environment.getExecution().isStreamingPlanner()) {
+			LOG.info("[info] 执行--> isStreamingPlanner");
 			streamExecEnv = createStreamExecutionEnvironment();
 			execEnv = null;
 
@@ -528,6 +534,7 @@ public class ExecutionContext<ClusterID> {
 					moduleManager,
 					functionCatalog);
 		} else if (environment.getExecution().isBatchPlanner()) {
+			LOG.info("[info] 执行--> isBatchPlanner");
 			streamExecEnv = null;
 			execEnv = createExecutionEnvironment();
 			executor = null;
@@ -612,11 +619,19 @@ public class ExecutionContext<ClusterID> {
 	}
 
 	private StreamExecutionEnvironment createStreamExecutionEnvironment() {
+		LOG.info("[info] 创建StreamExecutionEnvironment");
 		final StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
 		env.setRestartStrategy(environment.getExecution().getRestartStrategy());
 		env.setParallelism(environment.getExecution().getParallelism());
 		env.setMaxParallelism(environment.getExecution().getMaxParallelism());
 		env.setStreamTimeCharacteristic(environment.getExecution().getTimeCharacteristic());
+		LOG.info("[info] 开启Checkpoint");
+		StateBackend fsStateBackend = new FsStateBackend("hdfs://localhost:9000/flink/flink-checkpoints");
+		env.setStateBackend(fsStateBackend);
+		env.enableCheckpointing(10000, CheckpointingMode.EXACTLY_ONCE);
+		env.getCheckpointConfig().setMaxConcurrentCheckpoints(1);
+		env.getCheckpointConfig().setMinPauseBetweenCheckpoints(500);
+		env.getCheckpointConfig().setCheckpointTimeout(60000);
 		if (env.getStreamTimeCharacteristic() == TimeCharacteristic.EventTime) {
 			env.getConfig().setAutoWatermarkInterval(environment.getExecution().getPeriodicWatermarksInterval());
 		}
@@ -625,6 +640,7 @@ public class ExecutionContext<ClusterID> {
 
 	private void registerFunctions() {
 		Map<String, FunctionDefinition> functions = new LinkedHashMap<>();
+		//这里可以读取配置文件，动态加载
 		environment.getFunctions().forEach((name, entry) -> {
 			final UserDefinedFunction function = FunctionService.createFunction(entry.getDescriptor(), classLoader, false);
 			functions.put(name, function);

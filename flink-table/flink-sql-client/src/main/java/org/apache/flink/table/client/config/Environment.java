@@ -60,6 +60,7 @@ public class Environment {
 
 	private Map<String, TableEntry> tables;
 
+	//udf
 	private Map<String, FunctionEntry> functions;
 
 	private ExecutionEntry execution;
