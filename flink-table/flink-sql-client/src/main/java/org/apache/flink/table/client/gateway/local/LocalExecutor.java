@@ -36,6 +36,9 @@ import org.apache.flink.core.execution.JobClient;
 import org.apache.flink.core.fs.FileSystem;
 import org.apache.flink.core.fs.Path;
 import org.apache.flink.core.plugin.PluginUtils;
+import org.apache.flink.runtime.jobgraph.SavepointConfigOptions;
+import org.apache.flink.runtime.jobgraph.SavepointRestoreSettings;
+import org.apache.flink.streaming.api.graph.StreamGraph;
 import org.apache.flink.table.api.QueryConfig;
 import org.apache.flink.table.api.StreamQueryConfig;
 import org.apache.flink.table.api.Table;
@@ -45,6 +48,7 @@ import org.apache.flink.table.api.java.StreamTableEnvironment;
 import org.apache.flink.table.catalog.exceptions.CatalogException;
 import org.apache.flink.table.client.SqlClientException;
 import org.apache.flink.table.client.config.Environment;
+import org.apache.flink.table.client.config.entries.ExecutionEntry;
 import org.apache.flink.table.client.config.entries.TableEntry;
 import org.apache.flink.table.client.config.entries.ViewEntry;
 import org.apache.flink.table.client.gateway.Executor;
@@ -71,12 +75,7 @@ import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Pattern;
 
@@ -111,7 +110,7 @@ public class LocalExecutor implements Executor {
 
 	// insert into sql match pattern
 	private static final Pattern INSERT_SQL_PATTERN = Pattern.compile("(INSERT\\s+(INTO|OVERWRITE).*)",
-			Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
+		Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
 
 	/**
 	 * Creates a local executor for submitting table programs and retrieving results.
@@ -181,11 +180,11 @@ public class LocalExecutor implements Executor {
 	 * Constructor for testing purposes.
 	 */
 	public LocalExecutor(
-			Environment defaultEnvironment,
-			List<URL> dependencies,
-			Configuration flinkConfig,
-			CustomCommandLine commandLine,
-			ClusterClientServiceLoader clusterClientServiceLoader) {
+		Environment defaultEnvironment,
+		List<URL> dependencies,
+		Configuration flinkConfig,
+		CustomCommandLine commandLine,
+		ClusterClientServiceLoader clusterClientServiceLoader) {
 		this.defaultEnvironment = defaultEnvironment;
 		this.dependencies = dependencies;
 		this.flinkConfig = flinkConfig;
@@ -203,16 +202,18 @@ public class LocalExecutor implements Executor {
 		// nothing to do yet
 	}
 
-	/** Returns ExecutionContext.Builder with given {@link SessionContext} session context. */
+	/**
+	 * Returns ExecutionContext.Builder with given {@link SessionContext} session context.
+	 */
 	private ExecutionContext.Builder createExecutionContextBuilder(SessionContext sessionContext) {
 		return ExecutionContext.builder(
-				defaultEnvironment,
-				sessionContext,
-				this.dependencies,
-				this.flinkConfig,
-				this.clusterClientServiceLoader,
-				this.commandLineOptions,
-				this.commandLines);
+			defaultEnvironment,
+			sessionContext,
+			this.dependencies,
+			this.flinkConfig,
+			this.clusterClientServiceLoader,
+			this.commandLineOptions,
+			this.commandLines);
 	}
 
 	@Override
@@ -221,9 +222,10 @@ public class LocalExecutor implements Executor {
 		if (this.contextMap.containsKey(sessionId)) {
 			throw new SqlExecutionException("Found another session with the same session identifier: " + sessionId);
 		} else {
+			//一个会话一个ExecutionContext，但会话信息存在内存，有丢失风险，之后可以保持到redis/zookeeper
 			this.contextMap.put(
-					sessionId,
-					createExecutionContextBuilder(sessionContext).build());
+				sessionId,
+				createExecutionContextBuilder(sessionContext).build());
 		}
 		return sessionId;
 	}
@@ -258,11 +260,32 @@ public class LocalExecutor implements Executor {
 		final Environment env = getExecutionContext(sessionId).getEnvironment();
 		final Map<String, String> properties = new HashMap<>();
 		properties.putAll(env.getExecution().asTopLevelMap());
+		properties.putAll(env.getExecution().asTopLevelMap());
 		properties.putAll(env.getDeployment().asTopLevelMap());
 		properties.putAll(env.getConfiguration().asMap());
+		// 判断是否在配置文件里面配置过，如果没有则put进去
+		String key0 = Environment.EXECUTION_ENTRY + '.' + ExecutionEntry.SAVEPOINT_PATH;
+		boolean isExistsSavepointPath = properties.containsKey(key0);
+		if (!isExistsSavepointPath) {
+			LOG.info("[info] put {}", key0);
+
+			properties.put(key0, "");
+		}
+		String key1 = Environment.EXECUTION_ENTRY + '.' + ExecutionEntry.SAVEPOINT_IGNORE_UNCLAIMED_STATE;
+		boolean isExistsAllowState = properties.containsKey(key1);
+		if (!isExistsAllowState) {
+			LOG.info("[info] put {}", key1);
+			properties.put(key1, "");
+		}
 		return properties;
 	}
 
+	/**
+	 * 清除会话配置信息 RESET;
+	 *
+	 * @param sessionId to identifier the session
+	 * @throws SqlExecutionException
+	 */
 	@Override
 	public void resetSessionProperties(String sessionId) throws SqlExecutionException {
 		ExecutionContext<?> context = getExecutionContext(sessionId);
@@ -270,9 +293,9 @@ public class LocalExecutor implements Executor {
 		// Book keep all the session states of current ExecutionContext then
 		// re-register them into the new one.
 		ExecutionContext<?> newContext = createExecutionContextBuilder(
-				context.getOriginalSessionContext())
-				.sessionState(context.getSessionState())
-				.build();
+			context.getOriginalSessionContext())
+			.sessionState(context.getSessionState())
+			.build();
 		this.contextMap.put(sessionId, newContext);
 	}
 
@@ -291,10 +314,10 @@ public class LocalExecutor implements Executor {
 		// Book keep all the session states of current ExecutionContext then
 		// re-register them into the new one.
 		ExecutionContext<?> newContext = createExecutionContextBuilder(
-				context.getOriginalSessionContext())
-				.env(newEnv)
-				.sessionState(context.getSessionState())
-				.build();
+			context.getOriginalSessionContext())
+			.env(newEnv)
+			.sessionState(context.getSessionState())
+			.build();
 		this.contextMap.put(sessionId, newContext);
 	}
 
@@ -321,9 +344,9 @@ public class LocalExecutor implements Executor {
 		if (newEnv.getTables().remove(name) != null) {
 			// Renew the ExecutionContext.
 			this.contextMap.put(
-					sessionId,
-					createExecutionContextBuilder(context.getOriginalSessionContext())
-							.env(newEnv).build());
+				sessionId,
+				createExecutionContextBuilder(context.getOriginalSessionContext())
+					.env(newEnv).build());
 		}
 	}
 
@@ -466,7 +489,7 @@ public class LocalExecutor implements Executor {
 
 		try {
 			return context.wrapClassLoader(() ->
-					Arrays.asList(tableEnv.getCompletionHints(statement, position)));
+				Arrays.asList(tableEnv.getCompletionHints(statement, position)));
 		} catch (Throwable t) {
 			// catch everything such that the query does not crash the executor
 			if (LOG.isDebugEnabled()) {
@@ -484,8 +507,8 @@ public class LocalExecutor implements Executor {
 
 	@Override
 	public TypedResult<List<Tuple2<Boolean, Row>>> retrieveResultChanges(
-			String sessionId,
-			String resultId) throws SqlExecutionException {
+		String sessionId,
+		String resultId) throws SqlExecutionException {
 		final DynamicResult<?> result = resultStore.getResult(resultId);
 		if (result == null) {
 			throw new SqlExecutionException("Could not find a result with result identifier '" + resultId + "'.");
@@ -599,7 +622,8 @@ public class LocalExecutor implements Executor {
 		Configuration configuration = new Configuration(context.getFlinkConfig());
 		// for update queries we don't wait for the job result, so run in detached mode
 		configuration.set(DeploymentOptions.ATTACHED, false);
-
+		// for savepoint restore
+		restoreSavepoint(context, pipeline, configuration);
 		// create execution
 		final ProgramDeployer deployer = new ProgramDeployer(configuration, jobName, pipeline);
 
@@ -612,16 +636,40 @@ public class LocalExecutor implements Executor {
 		}
 	}
 
+	/**
+	 * 从savepoint恢复任务
+	 *
+	 * @param context
+	 * @param pipeline
+	 * @param configuration
+	 */
+	private void restoreSavepoint(ExecutionContext context,
+								  Pipeline pipeline,
+								  Configuration configuration) {
+		// 获取执行器，并查看是否是以savepoint恢复
+		ExecutionEntry execution = context.getEnvironment().getExecution();
+		Optional<String> savepoint = execution.getSavepointPath();
+		StreamGraph graph = (StreamGraph) pipeline;
+		savepoint.ifPresent(s -> {
+			Boolean ignoreUnclaimedState = execution.getSavepointIgnoreUnclaimedState();
+			LOG.info("[info] savepoint path is {}", s);
+			LOG.info("[info] allow to skip savepoint state  {}", ignoreUnclaimedState.toString());
+			configuration.set(SavepointConfigOptions.SAVEPOINT_PATH, s);
+			configuration.set(SavepointConfigOptions.SAVEPOINT_IGNORE_UNCLAIMED_STATE, ignoreUnclaimedState);
+			graph.setSavepointRestoreSettings(SavepointRestoreSettings.forPath(s, ignoreUnclaimedState));
+		});
+	}
+
 	private <C> ResultDescriptor executeQueryInternal(String sessionId, ExecutionContext<C> context, String query) {
 		// create table
 		final Table table = createTable(context, context.getTableEnvironment(), query);
 
 		// initialize result
 		final DynamicResult<C> result = resultStore.createResult(
-				context.getEnvironment(),
-				removeTimeAttributes(table.getSchema()),
-				context.getExecutionConfig(),
-				context.getClassLoader());
+			context.getEnvironment(),
+			removeTimeAttributes(table.getSchema()),
+			context.getExecutionConfig(),
+			context.getClassLoader());
 		final String jobName = sessionId + ": " + query;
 		final String tableName = String.format("_tmp_table_%s", Math.abs(query.hashCode()));
 		final Pipeline pipeline;
@@ -630,8 +678,8 @@ public class LocalExecutor implements Executor {
 			context.wrapClassLoader(() -> {
 				context.getTableEnvironment().registerTableSink(tableName, result.getTableSink());
 				table.insertInto(
-						context.getQueryConfig(),
-						tableName);
+					context.getQueryConfig(),
+					tableName);
 			});
 			pipeline = context.createPipeline(jobName);
 		} catch (Throwable t) {
@@ -656,7 +704,7 @@ public class LocalExecutor implements Executor {
 
 		// create execution
 		final ProgramDeployer deployer = new ProgramDeployer(
-				configuration, jobName, pipeline);
+			configuration, jobName, pipeline);
 
 		JobClient jobClient;
 		// blocking deployment
@@ -674,9 +722,9 @@ public class LocalExecutor implements Executor {
 		result.startRetrieval(jobClient);
 
 		return new ResultDescriptor(
-				jobId,
-				removeTimeAttributes(table.getSchema()),
-				result.isMaterialized());
+			jobId,
+			removeTimeAttributes(table.getSchema()),
+			result.isMaterialized());
 	}
 
 	/**

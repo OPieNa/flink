@@ -95,6 +95,7 @@ public class SqlClient {
 			}
 
 			// Open an new session
+			//在打开SQL Client的适合就会执行这里创建一个会话，并初始化一系列参数，包括ENV
 			String sessionId = executor.openSession(context);
 			try {
 				// add shutdown hook

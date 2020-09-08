@@ -140,6 +140,7 @@ public class ExecutionContext<ClusterID> {
 	// Members that should be reused in the same session.
 	private SessionState sessionState;
 
+	//通过创建者模式进入到构造方法。
 	private ExecutionContext(
 			Environment environment,
 			SessionContext originalSessionContext,
@@ -151,7 +152,6 @@ public class ExecutionContext<ClusterID> {
 			List<CustomCommandLine> availableCommandLines) throws FlinkException {
 		this.environment = environment;
 		this.originalSessionContext = originalSessionContext;
-
 		this.flinkConfig = flinkConfig;
 
 		// create class loader
@@ -500,7 +500,11 @@ public class ExecutionContext<ClusterID> {
 			// No need to register the catalogs if already inherit from the same session.
 			initializeCatalogs();
 		} else {
+			//在会话内，执行SET命令设置配置参数时就会执行这一步
 			LOG.info("[info] 执行--> noInheritedState2");
+			//todo 可以考虑在Client中支持SET New.UDF-dir=/usr/flink-1.10/conf/udf.yaml来实现动态加载UDF
+			//todo 读取指定目录下的配置文件，加载,可以借鉴：registerFunctions();
+
 			// Set up session state.
 			this.sessionState = sessionState;
 			createTableEnvironment(
@@ -626,12 +630,15 @@ public class ExecutionContext<ClusterID> {
 		env.setMaxParallelism(environment.getExecution().getMaxParallelism());
 		env.setStreamTimeCharacteristic(environment.getExecution().getTimeCharacteristic());
 		LOG.info("[info] 开启Checkpoint");
+
 		StateBackend fsStateBackend = new FsStateBackend("hdfs://localhost:9000/flink/flink-checkpoints");
 		env.setStateBackend(fsStateBackend);
 		env.enableCheckpointing(10000, CheckpointingMode.EXACTLY_ONCE);
 		env.getCheckpointConfig().setMaxConcurrentCheckpoints(1);
 		env.getCheckpointConfig().setMinPauseBetweenCheckpoints(500);
 		env.getCheckpointConfig().setCheckpointTimeout(60000);
+		env.getCheckpointConfig().getExternalizedCheckpointCleanup();
+
 		if (env.getStreamTimeCharacteristic() == TimeCharacteristic.EventTime) {
 			env.getConfig().setAutoWatermarkInterval(environment.getExecution().getPeriodicWatermarksInterval());
 		}
